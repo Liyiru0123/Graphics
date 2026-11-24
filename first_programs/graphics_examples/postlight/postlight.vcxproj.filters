@@ -26,6 +26,9 @@
     <ClCompile Include="..\..\..\poslight\poslight\poslight.cpp">
       <Filter>资源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\example_objects\example_objects\wedge.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\example_objects\example_objects\tetrahedron.cpp">
       <Filter>资源文件</Filter>
     </ClCompile>
@@ -47,6 +50,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\example_objects\example_objects\cube.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\example_objects\example_objects\wedge.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\example_objects\example_objects\cylinder.h">

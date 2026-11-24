@@ -31,6 +31,7 @@ if you prefer */
 // Include headers for our objects
 #include "sphere.h"
 #include "cube.h"
+#include "wedge.h"
 
 /* Define buffer object indices */
 GLuint elementbuffer;
@@ -59,11 +60,13 @@ GLuint modelID, viewID, projectionID, lightposID, normalmatrixID;
 GLuint colourmodeID, emitmodeID, attenuationmodeID;
 
 GLfloat aspect_ratio;		/* Aspect ratio of the window defined in the reshape callback*/
+bool framebufferDrawable = true;
 GLuint numspherevertices;
 
 /* Global instances of our objects */
 Sphere aSphere;
 Cube aCube;
+Wedge aWedge;
 
 using namespace std;
 using namespace glm;
@@ -121,12 +124,16 @@ void init(GLWrapper *glw)
 	/* create our sphere and cube objects */
 	aSphere.makeSphere(numlats, numlongs);
 	aCube.makeCube();
+	aWedge.makeWedge();
 }
 
 /* Called to update the display. Note that this function is called in the event loop in the wrapper
    class because we registered display as a callback function */
 void display()
 {
+	// Minimized windows can have a zero-sized framebuffer. Keep polling events,
+	// but do not construct a projection or draw until a valid size returns.
+	if (!framebufferDrawable) return;
 	/* Define the background colour */
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -225,9 +232,19 @@ void display()
 	const mat4 feeder = translate(station, vec3(-0.70f, -0.50f, 0));
 	drawBox(feeder, vec3(0, 0, -0.12f), vec3(0.70f, 0.07f, 0.07f));
 	drawBox(feeder, vec3(0, 0, 0.12f), vec3(0.70f, 0.07f, 0.07f));
-	drawBox(feeder, vec3(0.23f * std::sin(1.7f * time), 0.08f, 0),
+	const float trayOffset = 0.23f * std::sin(1.7f * time);
+	drawBox(feeder, vec3(trayOffset, 0.08f, 0),
 		vec3(0.23f, 0.10f, 0.33f));
 
+    // The workpiece inherits the feeder frame and the tray's displacement.
+    const mat4 wedgeModel = translate(feeder, vec3(trayOffset, 0.13f, 0));
+    const mat3 wedgeNormals = transpose(inverse(mat3(view * wedgeModel)));
+    glUniformMatrix4fv(modelID, 1, GL_FALSE, value_ptr(wedgeModel));
+    glUniformMatrix3fv(normalmatrixID, 1, GL_FALSE, value_ptr(wedgeNormals));
+    // Show the workpiece's gold vertex colour without changing other objects.
+    glUniform1ui(colourmodeID, 1);
+    aWedge.drawWedge(drawmode);
+    glUniform1ui(colourmodeID, colourmode);
 	// Rotary fixture with an offset jaw that makes rotation visible.
 	const mat4 fixture = translate(station, vec3(0.68f, 0.37f, 0));
 	drawBox(fixture, vec3(0), vec3(0.38f, 0.38f, 0.12f));
@@ -255,8 +272,10 @@ void display()
 /* Called whenever the window is resized. The new window size is given, in pixels. */
 static void reshape(GLFWwindow* window, int w, int h)
 {
+	framebufferDrawable = w > 0 && h > 0;
+	if (!framebufferDrawable) return; // Preserve the last valid aspect ratio.
 	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
-	aspect_ratio = ((float)w / 640.f*4.f) / ((float)h / 480.f*3.f);
+	aspect_ratio = static_cast<float>(w) / static_cast<float>(h);
 }
 
 /* change view angle, exit upon ESC */
@@ -341,6 +360,7 @@ int main(int argc, char* argv[])
 
 	glw->eventLoop();
 
+	// GLWrapper::eventLoop destroys the context and its buffers before returning.
 	delete(glw);
 	return 0;
 }

@@ -128,6 +128,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\example_objects\example_objects\cube.cpp" />
+    <ClCompile Include="..\..\..\example_objects\example_objects\wedge.cpp" />
     <ClCompile Include="..\..\..\example_objects\example_objects\cylinder.cpp" />
     <ClCompile Include="..\..\..\example_objects\example_objects\sphere.cpp" />
     <ClCompile Include="..\..\..\example_objects\example_objects\tetrahedron.cpp" />
@@ -137,6 +138,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\example_objects\example_objects\cube.h" />
+    <ClInclude Include="..\..\..\example_objects\example_objects\wedge.h" />
     <ClInclude Include="..\..\..\example_objects\example_objects\cylinder.h" />
     <ClInclude Include="..\..\..\example_objects\example_objects\sphere.h" />
     <ClInclude Include="..\..\..\example_objects\example_objects\tetrahedron.h" />
