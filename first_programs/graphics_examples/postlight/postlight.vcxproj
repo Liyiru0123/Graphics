@@ -152,4 +152,10 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <RuntimeShader Include="$(ProjectDir)..\..\shaders\poslight.vert;$(ProjectDir)..\..\shaders\poslight.frag" />
+  </ItemGroup>
+  <Target Name="CopyRuntimeShaders" AfterTargets="Build">
+    <Copy SourceFiles="@(RuntimeShader)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

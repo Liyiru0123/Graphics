@@ -18,6 +18,8 @@ if you prefer */
 
 /* Include the header to the GLFW wrapper class which
    also includes the OpenGL extension initialisation*/
+#define NOMINMAX
+#include <windows.h>
 #include "wrapper_glfw.h"
 #include <algorithm>
 #include <cmath>
@@ -60,6 +62,8 @@ static double mechanismTime = 0.0;
 static double lastFrameTime = 0.0;
 static double animationSpeed = 1.0;
 static int animationDirection = 1;
+static bool animationPaused = false;
+static float cameraDistance = 4.0f;
 
 /* Uniforms*/
 GLuint modelID, viewID, projectionID, lightposID, normalmatrixID;
@@ -88,7 +92,7 @@ void init(GLWrapper *glw)
 	x = 0.05f;
 	y = 0;
 	z = 0;
-	vx = 0; vx = 0, vz = 4.f;
+	vx = 0; vy = 0; vz = 0;
 	light_x = 0; light_y = 0; light_z = 0;
 	angle_x = angle_y = angle_z = 0;
 	angle_inc_x = angle_inc_y = angle_inc_z = 0;
@@ -108,7 +112,7 @@ void init(GLWrapper *glw)
 	/* Load and build the vertex and fragment shaders */
 	try
 	{
-		program = glw->LoadShader("..\\..\\..\\poslight\\poslight\\poslight.vert", "..\\..\\..\\poslight\\poslight\\poslight.frag");
+		program = glw->LoadShader("poslight.vert", "poslight.frag");
 	}
 	catch (exception &e)
 	{
@@ -165,7 +169,7 @@ void display()
 
 	// Camera matrix
 	mat4 view = lookAt(
-		vec3(0, 0, 4), // Camera is at (0,0,4), in World Space
+		vec3(0, 0, cameraDistance), // Camera distance from the scene centre
 		vec3(0, 0, 0), // and looks at the origin
 		vec3(0, 1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
 		);
@@ -223,7 +227,8 @@ void display()
 
 	const mat4 station = translate(model.top(), vec3(x - 0.05f, y, z));
 	const double now = glfwGetTime();
-	mechanismTime += (now - lastFrameTime) * animationSpeed * animationDirection;
+	if (!animationPaused)
+		mechanismTime += (now - lastFrameTime) * animationSpeed * animationDirection;
 	lastFrameTime = now;
 	const float time = static_cast<float>(mechanismTime);
 	const vec3 zAxis(0, 0, 1);
@@ -291,7 +296,7 @@ static void reshape(GLFWwindow* window, int w, int h)
 static void keyCallback(GLFWwindow* window, int key, int s, int action, int mods)
 {
 	/* Enable this call if you want to disable key responses to a held down key*/
-	//if (action != GLFW_PRESS) return;
+	if (action == GLFW_RELEASE) return;
 
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
@@ -309,6 +314,15 @@ static void keyCallback(GLFWwindow* window, int key, int s, int action, int mods
 			animationSpeed = std::max(0.25, animationSpeed - 0.25);
 			cout << "Animation speed: " << animationSpeed << "x" << endl;
 			break;
+		case GLFW_KEY_HOME:
+			vx = vy = vz = 0.0f;
+			cameraDistance = 4.0f;
+			light_x = light_y = light_z = 0.0f;
+			break;
+		case GLFW_KEY_SPACE:
+			animationPaused = !animationPaused;
+			cout << (animationPaused ? "Paused" : "Playing") << endl;
+			break;
 		case GLFW_KEY_F:
 			animationDirection = -animationDirection;
 			cout << "Animation direction: " << (animationDirection > 0 ? "forward" : "reverse") << endl;
@@ -316,47 +330,37 @@ static void keyCallback(GLFWwindow* window, int key, int s, int action, int mods
 		}
 	}
 
-	if (key == 'Q') angle_inc_x -= speed;
-	if (key == 'W') angle_inc_x += speed;
-	if (key == 'E') angle_inc_y -= speed;
-	if (key == 'R') angle_inc_y += speed;
-	if (key == 'T') angle_inc_z -= speed;
-	if (key == 'Y') angle_inc_z += speed;
-	if (key == 'A') model_scale -= speed / 0.5f;
-	if (key == 'S') model_scale += speed / 0.5f;
-	if (key == 'Z') x -= speed;
-	if (key == 'X') x += speed;
-	if (key == 'C') y -= speed;
-	if (key == 'V') y += speed;
-	if (key == 'B') z -= speed;
-	if (key == 'N') z += speed;
-	if (key == '1') light_x -= speed;
-	if (key == '2') light_x += speed;
-	if (key == '3') light_y -= speed;
-	if (key == '4') light_y += speed;
-	if (key == '5') light_z -= speed;
-	if (key == '6') light_z += speed;
-	if (key == '7') vx -= 1.f;
-	if (key == '8') vx += 1.f;
-	if (key == '9') vy -= 1.f;
-	if (key == '0') vy += 1.f;
-	if (key == 'O') vz -= 1.f;
-	if (key == 'P') vz += 1.f;
+	// Held keys use GLFW repeat. Bound travel so the light and camera remain usable.
+	switch (key)
+	{
+	case GLFW_KEY_A: light_x = std::max(-3.0f, light_x - speed); break;
+	case GLFW_KEY_D: light_x = std::min(3.0f, light_x + speed); break;
+	case GLFW_KEY_S: light_y = std::max(-3.0f, light_y - speed); break;
+	case GLFW_KEY_W: light_y = std::min(3.0f, light_y + speed); break;
+	case GLFW_KEY_Q: light_z = std::max(-3.0f, light_z - speed); break;
+	case GLFW_KEY_E: light_z = std::min(3.0f, light_z + speed); break;
+	case GLFW_KEY_LEFT: vy -= 3.0f; break;
+	case GLFW_KEY_RIGHT: vy += 3.0f; break;
+	case GLFW_KEY_UP: vx = std::min(75.0f, vx + 3.0f); break;
+	case GLFW_KEY_DOWN: vx = std::max(-75.0f, vx - 3.0f); break;
+	case GLFW_KEY_PAGE_UP: cameraDistance = std::max(2.2f, cameraDistance - 0.15f); break;
+	case GLFW_KEY_PAGE_DOWN: cameraDistance = std::min(9.0f, cameraDistance + 0.15f); break;
+	}
 
-	if (key == 'M' && action != GLFW_PRESS)
+	if (key == 'M' && action == GLFW_PRESS)
 	{
 		colourmode = !colourmode;
 		cout << "colourmode=" << colourmode << endl;
 	}
 
 	/* Turn attenuation on and off */
-	if (key == '.' && action != GLFW_PRESS)
+	if (key == '.' && action == GLFW_PRESS)
 	{
 		attenuationmode = !attenuationmode;
 	}
 
 	/* Cycle between drawing vertices, mesh and filled polygons */
-	if (key == ',' && action != GLFW_PRESS)
+	if (key == ',' && action == GLFW_PRESS)
 	{
 		drawmode ++;
 		if (drawmode > 2) drawmode = 0;
@@ -367,7 +371,23 @@ static void keyCallback(GLFWwindow* window, int key, int s, int action, int mods
 /* Entry point of program */
 int main(int argc, char* argv[])
 {
-	GLWrapper *glw = new GLWrapper(1024, 768, "Position light example");;
+	// Resolve shader files relative to the executable, even when launched from another folder.
+	wchar_t executablePath[32768];
+	const DWORD length = GetModuleFileNameW(nullptr, executablePath, 32768);
+	if (length == 0 || length == 32768)
+	{
+		cerr << "Cannot locate the executable directory." << endl;
+		return 1;
+	}
+	std::wstring directory(executablePath, length);
+	directory.resize(directory.find_last_of(L'\\') + 1);
+	if (!SetCurrentDirectoryW(directory.c_str()))
+	{
+		cerr << "Cannot open the executable directory." << endl;
+		return 1;
+	}
+
+	GLWrapper *glw = new GLWrapper(1024, 768, "Assembly Workcell");
 
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
@@ -379,7 +399,6 @@ int main(int argc, char* argv[])
 
 	glw->setRenderer(display);
 	glw->setKeyCallback(keyCallback);
-	glw->setKeyCallback(keyCallback);
 	glw->setReshapeCallback(reshape);
 
 	/* Output the OpenGL vendor and version */
@@ -387,7 +406,11 @@ int main(int argc, char* argv[])
 
 	init(glw);
 
-	cout << "Mechanism animation: =/+ faster, - slower, F reverse" << endl;
+	cout << "Assembly Workcell\n"
+	     << "Light: A/D left/right, W/S up/down, Q/E depth\n"
+	     << "Camera: arrows orbit, Page Up/Down zoom, Home reset camera and light\n"
+	     << "Animation: =/+ faster, - slower, F reverse, Space pause/resume\n"
+	     << "M colour mode, period light falloff, comma render mode, Esc exit" << endl;
 	lastFrameTime = glfwGetTime();
 	glw->eventLoop();
 
