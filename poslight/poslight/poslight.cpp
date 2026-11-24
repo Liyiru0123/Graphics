@@ -19,6 +19,7 @@ if you prefer */
 /* Include the header to the GLFW wrapper class which
    also includes the OpenGL extension initialisation*/
 #include "wrapper_glfw.h"
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <stack>
@@ -53,6 +54,11 @@ GLuint numlats, numlongs;	//Define the resolution of the sphere object
 GLfloat speed;				// movement increment
 
 GLfloat light_x, light_y, light_z;
+
+static double mechanismTime = 0.0;
+static double lastFrameTime = 0.0;
+static double animationSpeed = 1.0;
+static int animationDirection = 1;
 
 /* Uniforms*/
 GLuint modelID, viewID, projectionID, lightposID, normalmatrixID;
@@ -209,7 +215,10 @@ void display()
 	};
 
 	const mat4 station = translate(model.top(), vec3(x - 0.05f, y, z));
-	const float time = static_cast<float>(glfwGetTime());
+	const double now = glfwGetTime();
+	mechanismTime += (now - lastFrameTime) * animationSpeed * animationDirection;
+	lastFrameTime = now;
+	const float time = static_cast<float>(mechanismTime);
 	const vec3 zAxis(0, 0, 1);
 
 	// Robotic arm in the upper-left corner.
@@ -267,6 +276,26 @@ static void keyCallback(GLFWwindow* window, int key, int s, int action, int mods
 
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
+
+	// Change the rate of the animation clock without resetting its position.
+	if (action == GLFW_PRESS)
+	{
+		switch (key)
+		{
+		case GLFW_KEY_EQUAL:
+			animationSpeed = std::min(3.0, animationSpeed + 0.25);
+			cout << "Animation speed: " << animationSpeed << "x" << endl;
+			break;
+		case GLFW_KEY_MINUS:
+			animationSpeed = std::max(0.25, animationSpeed - 0.25);
+			cout << "Animation speed: " << animationSpeed << "x" << endl;
+			break;
+		case GLFW_KEY_F:
+			animationDirection = -animationDirection;
+			cout << "Animation direction: " << (animationDirection > 0 ? "forward" : "reverse") << endl;
+			break;
+		}
+	}
 
 	if (key == 'Q') angle_inc_x -= speed;
 	if (key == 'W') angle_inc_x += speed;
@@ -339,6 +368,8 @@ int main(int argc, char* argv[])
 
 	init(glw);
 
+	cout << "Mechanism animation: =/+ faster, - slower, F reverse" << endl;
+	lastFrameTime = glfwGetTime();
 	glw->eventLoop();
 
 	delete(glw);
