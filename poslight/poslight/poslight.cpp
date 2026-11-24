@@ -2,7 +2,7 @@
  poslight.cpp
  Demonstrates a positional light with attenuation
  with per-vertex lighting (Gouraud shading) coded in the vertex shader.
- Displays a cube and a sphere and a small sphere to show the light position
+ Displays four animated mechanisms and a small sphere marking the light position
  Includes controls to move the light source and rotate the view
  Iain Martin October 2018
 */
@@ -19,6 +19,7 @@ if you prefer */
 /* Include the header to the GLFW wrapper class which
    also includes the OpenGL extension initialisation*/
 #include "wrapper_glfw.h"
+#include <cmath>
 #include <iostream>
 #include <stack>
 
@@ -146,7 +147,7 @@ void display()
 	// Define the normal matrix
 	mat3 normalmatrix;
 
-	// Projection matrix : 45° Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
+	// Projection matrix : 45? Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
 	mat4 projection = perspective(radians(30.0f), aspect_ratio, 0.1f, 100.0f);
 
 	// Camera matrix
@@ -197,39 +198,51 @@ void display()
 	model.top() = rotate(model.top(), -radians(angle_y), glm::vec3(0, 1, 0)); //rotating in clockwise direction around y-axis
 	model.top() = rotate(model.top(), -radians(angle_z), glm::vec3(0, 0, 1)); //rotating in clockwise direction around z-axis
 
-	// This block of code draws the cube
-	model.push(model.top());
+	// Draw each component with the existing lighting shader.
+	const auto drawBox = [&](const mat4& frame, const vec3& center, const vec3& size)
 	{
-		// Define the model transformations for the cube
-		model.top() = translate(model.top(), vec3(x + 0.5f, y, z));
-
-		// Send the model uniform and normal matrix to the currently bound shader,
-		glUniformMatrix4fv(modelID, 1, GL_FALSE, &(model.top()[0][0]));
-
-		// Recalculate the normal matrix and send to the vertex shader
-		normalmatrix = transpose(inverse(mat3(view * model.top())));
-		glUniformMatrix3fv(normalmatrixID, 1, GL_FALSE, &normalmatrix[0][0]);
-
-		/* Draw our cube*/
+		const mat4 transform = scale(translate(frame, center), 2.0f * size);
+		const mat3 normals = transpose(inverse(mat3(view * transform)));
+		glUniformMatrix4fv(modelID, 1, GL_FALSE, value_ptr(transform));
+		glUniformMatrix3fv(normalmatrixID, 1, GL_FALSE, value_ptr(normals));
 		aCube.drawCube(drawmode);
-	}
-	model.pop();
-	
-	// This block of code draws the sphere
-	model.push(model.top());
-	{
-		model.top() = translate(model.top(), vec3(-x - 0.5f, 0, 0));
-		model.top() = scale(model.top(), vec3(model_scale / 3.f, model_scale / 3.f, model_scale / 3.f));//scale equally in all axis
-																							
-		// Recalculate the normal matrix and send the model and normal matrices to the vertex shader																							// Recalculate the normal matrix and send to the vertex shader																								// Recalculate the normal matrix and send to the vertex shader																								// Recalculate the normal matrix and send to the vertex shader																						// Recalculate the normal matrix and send to the vertex shader
-		glUniformMatrix4fv(modelID, 1, GL_FALSE, &(model.top()[0][0]));
-		normalmatrix = transpose(inverse(mat3(view * model.top())));
-		glUniformMatrix3fv(normalmatrixID, 1, GL_FALSE, &normalmatrix[0][0]);
+	};
 
-		aSphere.drawSphere(drawmode); // Draw our sphere
-	}
-	model.pop();
-	
+	const mat4 station = translate(model.top(), vec3(x - 0.05f, y, z));
+	const float time = static_cast<float>(glfwGetTime());
+	const vec3 zAxis(0, 0, 1);
+
+	// Robotic arm in the upper-left corner.
+	const mat4 arm = translate(station, vec3(-0.78f, 0.25f, 0));
+	drawBox(arm, vec3(0, -0.13f, 0), vec3(0.32f, 0.11f, 0.18f));
+	const mat4 shoulder = rotate(arm, 0.3f + 0.55f * std::sin(time), zAxis);
+	drawBox(shoulder, vec3(0, 0.16f, 0), vec3(0.10f, 0.32f, 0.12f));
+	const mat4 elbow = rotate(translate(shoulder, vec3(0, 0.32f, 0)),
+		-0.9f + 0.4f * std::sin(1.4f * time), zAxis);
+	drawBox(elbow, vec3(0, 0.13f, 0), vec3(0.08f, 0.26f, 0.10f));
+
+	// Feed table with a tray sliding along two stationary rails.
+	const mat4 feeder = translate(station, vec3(-0.70f, -0.50f, 0));
+	drawBox(feeder, vec3(0, 0, -0.12f), vec3(0.70f, 0.07f, 0.07f));
+	drawBox(feeder, vec3(0, 0, 0.12f), vec3(0.70f, 0.07f, 0.07f));
+	drawBox(feeder, vec3(0.23f * std::sin(1.7f * time), 0.08f, 0),
+		vec3(0.23f, 0.10f, 0.33f));
+
+	// Rotary fixture with an offset jaw that makes rotation visible.
+	const mat4 fixture = translate(station, vec3(0.68f, 0.37f, 0));
+	drawBox(fixture, vec3(0), vec3(0.38f, 0.38f, 0.12f));
+	const mat4 chuck = rotate(translate(fixture, vec3(0, 0, 0.10f)), 1.7f * time, zAxis);
+	drawBox(chuck, vec3(0), vec3(0.34f, 0.12f, 0.10f));
+	drawBox(chuck, vec3(0.12f, 0.07f, 0.03f), vec3(0.10f, 0.10f, 0.10f));
+
+	// Press with a fixed frame and reciprocating ram.
+	const mat4 press = translate(station, vec3(0.70f, -0.48f, 0));
+	drawBox(press, vec3(0, -0.18f, 0), vec3(0.48f, 0.08f, 0.22f));
+	drawBox(press, vec3(-0.19f, 0, 0), vec3(0.08f, 0.38f, 0.16f));
+	drawBox(press, vec3(0, 0.19f, 0), vec3(0.48f, 0.08f, 0.22f));
+	const float ramHeight = 0.035f + 0.095f * std::sin(2.3f * time);
+	drawBox(press, vec3(0.09f, ramHeight, 0.04f), vec3(0.13f, 0.16f, 0.14f));
+
 	glDisableVertexAttribArray(0);
 	glUseProgram(0);
 
