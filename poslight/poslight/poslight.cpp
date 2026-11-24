@@ -98,7 +98,7 @@ void init(GLWrapper *glw)
 	/* Load and build the vertex and fragment shaders */
 	try
 	{
-		program = glw->LoadShader("..\\..\\shaders\\poslight.vert", "..\\..\\shaders\\poslight.frag");
+		program = glw->LoadShader("..\\..\\..\\poslight\\poslight\\poslight.vert", "..\\..\\..\\poslight\\poslight\\poslight.frag");
 	}
 	catch (exception &e)
 	{
