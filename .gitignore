@@ -1,0 +1,11 @@
+.vs/
+Debug/
+Release/
+*.vcxproj.user
+
+# Local course handouts and downloaded archives at the repository root
+/Lab *.pdf
+/example_objects.zip
+/first_programs.zip
+/fraglight.zip
+/poslight.zip
